@@ -1,0 +1,50 @@
+/* Lexical part */
+
+_numeric      : '0'-'9' ;
+_alphabet     : 'a'-'z' | 'A'-'Z' ;
+_alpha_numeric: _numeric | _alphabet ;
+
+nil       : 'n' 'i' 'l' ;
+integer   : ('+' | '-') {_numeric} | {_numeric} ;
+float     : (('+' | '-') {_numeric} | {_numeric}) '.' {_numeric} ;
+boolean   : 't' 'r' 'u' 'e' | 'f' 'a' 'l' 's' 'e' ;
+identifire: (_alphabet | '_') {_alpha_numeric | '_'} ;
+string    : '\'' {.} '\'' ;
+regexp    : '/' {.} '/' ;
+
+!whitespace : ' ' | '\t' | '\n' | '\r' ;
+
+
+/* Syntax part */
+
+<< 
+import(
+  "github.com/odoku/validator/ast"
+)
+>>
+
+Statement
+  : Function               << ast.NewFunctionList($0) >>
+  | Statement "," Function << ast.AppendFunction($0, $2) >>
+;
+
+Expression
+  : Function   << $0, nil >>
+  | identifire << ast.NewString($0, "") >>
+  | nil        << nil, nil >>
+  | string     << ast.NewString($0, "'") >>
+  | integer    << ast.NewInteger($0) >>
+  | float      << ast.NewFloat($0) >>
+  | boolean    << ast.NewBoolean($0) >>
+  | regexp     << ast.NewRegexp($0) >>
+;
+
+Arguments
+  : Expression               << ast.NewArgumentList($0) >>
+  | Arguments "," Expression << ast.AppendArgument($0, $2) >>
+;
+
+Function
+  : identifire "()"              << ast.NewFunction($0, nil) >>
+  | identifire "(" Arguments ")" << ast.NewFunction($0, $2) >>
+;
